@@ -1,0 +1,25 @@
+services:
+  sam-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sam-random-mask-service:latest
+    container_name: sam-random-mask-service
+    restart: unless-stopped
+    ports:
+      - "${SAM_SERVICE_PORT:-9091}:9091"
+    environment:
+      SAM_SERVICE_HOST: 0.0.0.0
+      SAM_SERVICE_PORT: 9091
+      SAM_SERVICE_DELAY_SECONDS: "${SAM_SERVICE_DELAY_SECONDS:-0.5}"
+      SAM_MODEL_PATH: /app/ml/sam_vit_b_01ec64.pth
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9091/health', timeout=2)"
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
