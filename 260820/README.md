@@ -15,3 +15,9 @@ Behavior:
   system toast asking the user to contact an administrator.
 
 Configuration is documented in `.env.example`.
+
+The included `docker-compose.yml` passes these variables to the Label Studio
+`app` container. Its default ML URL is
+`http://host.docker.internal:9091/predict`, which reaches a SAM test service
+published on the Docker host. Override `MAGIC_WAND_ML_URL` when both services
+share a Docker network, for example `http://sam-service:9091/predict`.
