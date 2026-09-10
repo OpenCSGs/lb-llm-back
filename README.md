@@ -1,3 +1,60 @@
+# Label Studio aggregated ML backend
+
+This repository provides one Label Studio ML service that detects the labeling
+template from the project configuration and routes requests to the appropriate
+backend. Version `v1.0.0` currently includes mask semantic segmentation and OCR.
+
+## Docker build and deployment
+
+Requirements: Docker Engine with Docker Compose v2, a running Label Studio
+instance, and a host media directory that can be mounted read-only by this
+service.
+
+```bash
+git clone https://github.com/OpenCSGs/lb-llm-back.git
+cd lb-llm-back
+cp .env.example .env
+```
+
+Edit `.env` before deployment. `LABEL_STUDIO_LOCAL_MEDIA_ROOT` is required and
+must be an absolute host path. Provider credentials are not deployment
+variables: Label Studio sends the current model connection's Seed API Key and,
+when required by the template, EntitySegment AK/SK with each request.
+
+Build the image:
+
+```bash
+docker compose build ml-backend
+```
+
+Build with an explicit image tag when required:
+
+```bash
+ML_BACKEND_IMAGE=opencsgs/lb-llm-back:v1.0.0 docker compose build ml-backend
+```
+
+Start and verify the service:
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs -f ml-backend
+```
+
+The default service address is `http://localhost:9090`. To rebuild and replace
+an existing container after code changes, run:
+
+```bash
+docker compose up -d --build --force-recreate ml-backend
+```
+
+Deployment parameters are documented in `.env.example`. The main parameters
+are `ML_BACKEND_PORT`, `LABEL_STUDIO_LOCAL_MEDIA_ROOT`,
+`USE_THIRD_PARTY_MODELS`, `DOUBAO_MODEL`, and
+`VOLCENGINE_ENTITY_SEGMENT_MODEL`. Do not configure provider credentials or
+`LABEL_STUDIO_API_KEY` in this service; Label Studio forwards them with each
+request.
+
 # What is the Label Studio ML backend?
 
 The Label Studio ML backend is an SDK that lets you wrap your machine learning code and turn it into a web server.
@@ -14,16 +71,15 @@ server.
 Use the following command to start serving the ML backend at `http://localhost:9090`:
 
 ```bash
-git clone https://github.com/HumanSignal/label-studio-ml-backend.git
-cd label-studio-ml-backend/label_studio_ml/examples/{MODEL_NAME}
-docker-compose up
+docker compose up -d --build
 ```
-
-Replace `{MODEL_NAME}` with the name of the model you want to use (see below). 
 
 ## Allow the ML backend to access Label Studio data
 
-In most cases, you will need to set `LABEL_STUDIO_URL` and `LABEL_STUDIO_API_KEY` environment variables to allow the ML backend access to the media data in Label Studio.
+Mount `LABEL_STUDIO_LOCAL_MEDIA_ROOT` to allow the aggregated backend to access
+uploaded media directly. Label Studio forwards its URL and the current user's
+token with each model request, so global `LABEL_STUDIO_URL` and
+`LABEL_STUDIO_API_KEY` variables are not required.
 [Read more in the documentation](https://labelstud.io/guide/ml#Allow-the-ML-backend-to-access-Label-Studio-data).
 
 # Models
@@ -305,5 +361,7 @@ You must ensure that the ML backend can access your Label Studio data. If it can
 * You are unable to see predictions when loading tasks in Label Studio.
 * Your ML backend appears to be connected properly, but cannot seem to complete any auto annotations within tasks. 
 
-To remedy this, ensure you have set the `LABEL_STUDIO_URL` and `LABEL_STUDIO_API_KEY` environment variables. For more information, see [Allow the ML backend to access Label Studio data](https://labelstud.io/guide/ml#Allow-the-ML-backend-to-access-Label-Studio-data).
-
+To remedy this, ensure the Label Studio URL sent with the request is reachable
+from the container, `LABEL_STUDIO_LOCAL_MEDIA_ROOT` points to the correct host
+media directory, and the user connecting the model has a valid Label Studio
+token. For more information, see [Allow the ML backend to access Label Studio data](https://labelstud.io/guide/ml#Allow-the-ML-backend-to-access-Label-Studio-data).

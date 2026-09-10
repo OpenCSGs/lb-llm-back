@@ -62,6 +62,7 @@ class NewModel(LabelStudioMLBase):
                 return str(candidate)
         return self.get_local_path(
             image_url, task_id=task_id,
+            ls_host=getattr(self, '_request_ls_url', None),
             ls_access_token=getattr(self, '_request_ls_token', None),
         )
 
@@ -104,6 +105,10 @@ class NewModel(LabelStudioMLBase):
 
         credentials = kwargs.pop('credentials', {}) or {}
         self._request_ls_token = kwargs.pop('ls_access_token', None)
+        self._request_ls_url = (
+            kwargs.pop('ls_url', None)
+            or kwargs.pop('label_studio_url', None)
+        )
         seed_api_key = credentials.get('seed_api_key') or os.getenv('ARK_API_KEY')
 
         route = resolve_image_route(self)
@@ -183,14 +188,13 @@ class NewModel(LabelStudioMLBase):
                 except ProviderAPIError:
                     raise
                 except Exception:
-                    fallback_label = os.getenv('VOLCENGINE_ENTITY_SEGMENT_LABEL') or template_labels[0]
+                    fallback_label = template_labels[0]
                     result_labels = [fallback_label] * len(predictor_results['masks'])
                     logger.exception(
                         'Doubao mask classification failed; returning masks with fallback label %s',
                         fallback_label,
                     )
             else:
-                selected_label = selected_label or os.getenv('VOLCENGINE_ENTITY_SEGMENT_LABEL')
                 selected_label = selected_label or template_labels[0]
                 result_labels = [selected_label] * len(predictor_results['masks'])
         else:
