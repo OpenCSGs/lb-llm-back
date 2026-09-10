@@ -1,0 +1,17 @@
+# Keep the aggregated service build context small.
+.git
+.github
+.idea
+.pytest_cache
+.venv
+**/.DS_Store
+**/__pycache__
+**/*.pyc
+label_studio_ml/examples/segment_anything_2_image/data
+# Implementations scheduled for later releases are kept locally but excluded
+# from this two-template image.
+label_studio_ml/aggregate_backend/templates/multi_page_document.py
+label_studio_ml/aggregate_backend/templates/object_detection.py
+label_studio_ml/aggregate_backend/templates/polygon_segmentation.py
+label_studio_ml/aggregate_backend/templates/vqa.py
+label_studio_ml/aggregate_backend/tests/test_multi_page_document.py

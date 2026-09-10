@@ -1,9 +1,29 @@
 import traceback as tb
 import logging
+import re
 
 from flask import request, jsonify, make_response
+import requests
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_exception_message(error):
+    """Return a useful provider error without exposing credentials."""
+    message = str(error)
+    if isinstance(error, requests.exceptions.HTTPError) and error.response is not None:
+        try:
+            body = error.response.json()
+            provider_message = (
+                body.get('message') or body.get('error', {}).get('message')
+                if isinstance(body, dict) else None
+            )
+            if provider_message:
+                message = f'HTTP {error.response.status_code}: {provider_message}'
+        except (ValueError, AttributeError):
+            message = f'HTTP {error.response.status_code}: third-party model request failed'
+    message = re.sub(r'Bearer\s+\S+', 'Bearer ***', message, flags=re.IGNORECASE)
+    return message[:1000]
 
 
 # make an answer to client
@@ -55,7 +75,7 @@ def exception_handler(f):
             body = {'traceback': traceback}
             if hasattr(exception_f, 'request_id'):
                 body['request_id'] = exception_f.request_id
-            return answer(500, e.__class__.__name__ + ': ' + str(e), body)
+            return answer(500, e.__class__.__name__ + ': ' + _safe_exception_message(e), body)
 
     exception_f.__name__ = f.__name__
     return exception_f
