@@ -14,14 +14,19 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+#RUN git clone https://github.com/HumanSignal/label-studio-sdk.git
+#COPY label-studio-sdk/ /tmp/label-studio-sdk/
+
 COPY requirements.txt /tmp/ml-backend-requirements.txt
 COPY label_studio_ml/aggregate_backend/requirements.txt /tmp/model-requirements.txt
-RUN pip install --no-cache-dir -r /tmp/ml-backend-requirements.txt \
-    && pip install --no-cache-dir gunicorn==22.0.0 \
-    && pip install --no-cache-dir -r /tmp/model-requirements.txt
+
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
+RUN pip install --no-cache-dir -r /tmp/ml-backend-requirements.txt -i ${PIP_INDEX_URL} \
+    && pip install --no-cache-dir gunicorn==22.0.0 -i ${PIP_INDEX_URL} \
+    && pip install --no-cache-dir -r /tmp/model-requirements.txt -i ${PIP_INDEX_URL}
 
 COPY . /opt/label-studio-ml-backend
-RUN pip install --no-cache-dir --no-deps -e /opt/label-studio-ml-backend
+RUN pip install --no-cache-dir --no-deps -e /opt/label-studio-ml-backend -i ${PIP_INDEX_URL}
 
 CMD gunicorn --chdir /opt/label-studio-ml-backend \
     --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 \
