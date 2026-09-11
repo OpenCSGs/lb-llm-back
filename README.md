@@ -27,6 +27,10 @@ Build the image:
 docker compose build ml-backend
 ```
 
+The default build uses mainland-China mirrors for the Python base image,
+Debian packages, and PyPI. Override `PYTHON_IMAGE`, `APT_MIRROR`,
+`PIP_INDEX_URL`, and `PIP_TRUSTED_HOST` in `.env` to use other mirrors.
+
 Build with an explicit image tag when required:
 
 ```bash

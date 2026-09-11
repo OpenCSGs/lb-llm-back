@@ -52,6 +52,13 @@ ML_BACKEND_IMAGE=opencsgs/lb-llm-back:v1.0.0
 WORKERS=1
 THREADS=8
 
+PYTHON_IMAGE=m.daocloud.io/docker.io/library/python:3.12-slim
+APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+PIP_DEFAULT_TIMEOUT=180
+PIP_RETRIES=10
+
 DOUBAO_MODEL=doubao-seed-2-1-turbo-260628
 ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 DOUBAO_TIMEOUT=360
@@ -75,6 +82,12 @@ LABEL_STUDIO_LOCAL_MEDIA_ROOT=/absolute/path/to/label-studio/data/media
 | `LOG_LEVEL` | 否 | `INFO` | 日志级别。 |
 | `WORKERS` | 否 | `1` | Gunicorn 进程数。外部接口调用型任务建议先保持为 `1`。 |
 | `THREADS` | 否 | `8` | 每个 Gunicorn 进程的线程数。 |
+| `PYTHON_IMAGE` | 否 | DaoCloud Python 3.12 镜像 | Docker 基础镜像地址。 |
+| `APT_MIRROR` | 否 | 清华 Debian HTTPS 镜像 | Debian 软件源地址。 |
+| `PIP_INDEX_URL` | 否 | 清华 PyPI 镜像 | Python 包索引地址。 |
+| `PIP_TRUSTED_HOST` | 否 | `pypi.tuna.tsinghua.edu.cn` | pip 信任的镜像主机。 |
+| `PIP_DEFAULT_TIMEOUT` | 否 | `180` | pip 单次网络请求超时秒数。 |
+| `PIP_RETRIES` | 否 | `10` | pip 网络失败重试次数。 |
 | `DOUBAO_MODEL` | 否 | `doubao-seed-2-1-turbo-260628` | Seed 模型名称。 |
 | `ARK_BASE_URL` | 否 | `https://ark.cn-beijing.volces.com/api/v3` | 方舟 API 地址。 |
 | `DOUBAO_TIMEOUT` | 否 | `360` | 调用 Seed 的超时时间，单位为秒。 |
@@ -99,7 +112,19 @@ HOST=http://host.docker.internal:8080
 
 ## 构建镜像
 
+默认使用国内基础镜像、APT 源和 PyPI 源：
+
 ```bash
+docker compose build ml-backend
+```
+
+如需临时切回官方源，可执行：
+
+```bash
+PYTHON_IMAGE=python:3.12-slim \
+APT_MIRROR=https://deb.debian.org \
+PIP_INDEX_URL=https://pypi.org/simple \
+PIP_TRUSTED_HOST=pypi.org \
 docker compose build ml-backend
 ```
 
