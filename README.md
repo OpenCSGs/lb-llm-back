@@ -24,17 +24,23 @@ when required by the template, EntitySegment AK/SK with each request.
 Build the image:
 
 ```bash
-docker compose build ml-backend
+docker build -t opencsgs/lb-llm-back:v1.0.0 .
 ```
 
 The default build uses mainland-China mirrors for the Python base image,
 Debian packages, and PyPI. Override `PYTHON_IMAGE`, `APT_MIRROR`,
-`PIP_INDEX_URL`, and `PIP_TRUSTED_HOST` in `.env` to use other mirrors.
+`PIP_INDEX_URL`, and `PIP_TRUSTED_HOST` with Docker `--build-arg` options to
+use other mirrors.
 
-Build with an explicit image tag when required:
+Override the default build mirrors when required:
 
 ```bash
-ML_BACKEND_IMAGE=opencsgs/lb-llm-back:v1.0.0 docker compose build ml-backend
+docker build \
+  --build-arg PYTHON_IMAGE=python:3.12-slim \
+  --build-arg APT_MIRROR=https://deb.debian.org \
+  --build-arg PIP_INDEX_URL=https://pypi.org/simple \
+  --build-arg PIP_TRUSTED_HOST=pypi.org \
+  -t opencsgs/lb-llm-back:v1.0.0 .
 ```
 
 Start and verify the service:
@@ -49,7 +55,8 @@ The default service address is `http://localhost:9090`. To rebuild and replace
 an existing container after code changes, run:
 
 ```bash
-docker compose up -d --build --force-recreate ml-backend
+docker build -t opencsgs/lb-llm-back:v1.0.0 .
+docker compose up -d --force-recreate ml-backend
 ```
 
 Deployment parameters are documented in `.env.example`. The main parameters
@@ -348,7 +355,7 @@ is updated, and you want to jump on the latest version in your docker image with
 You can rebuild a docker image from scratch with the following command:
 
 ```bash
-docker compose build --no-cache
+docker build --no-cache -t opencsgs/lb-llm-back:v1.0.0 .
 ```
 
 ## Troubleshooting `Bad Gateway` and `Service Unavailable` errors
