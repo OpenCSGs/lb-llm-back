@@ -2,6 +2,9 @@ from uuid import uuid4
 
 from label_studio_sdk.converter import brush
 
+from .templates.object_detection import mask_to_rectangle
+from .templates.polygon_segmentation import mask_to_polygons
+
 def _common_result(route, width, height, probability):
     return {
         'id': str(uuid4())[:8],
@@ -32,6 +35,32 @@ def convert_masks(route, masks, probabilities, labels, width, height):
                 },
             })
             used_probabilities.append(probability)
+        elif route.control_type == 'RectangleLabels':
+            rectangle = mask_to_rectangle(mask)
+            if rectangle:
+                results.append({
+                    **common,
+                    'type': 'rectanglelabels',
+                    'value': {
+                        **rectangle,
+                        'rotation': 0,
+                        'rectanglelabels': [label],
+                    },
+                })
+                used_probabilities.append(probability)
+        elif route.control_type == 'PolygonLabels':
+            for points in mask_to_polygons(mask):
+                results.append({
+                    **common,
+                    'id': str(uuid4())[:8],
+                    'type': 'polygonlabels',
+                    'value': {
+                        'points': points,
+                        'closed': True,
+                        'polygonlabels': [label],
+                    },
+                })
+                used_probabilities.append(probability)
 
     score = sum(used_probabilities) / max(len(used_probabilities), 1)
     return results, score
@@ -115,3 +144,31 @@ def convert_ocr_lines(route, lines, width, height):
         scores.append(score)
 
     return results, sum(scores) / max(len(scores), 1)
+
+
+def convert_vqa(route, answers, aspect, score):
+    """Convert one Seed VQA response into Label Studio textarea/label results."""
+    results = []
+    for question_key, answer_from_name, question_to_name in route.questions:
+        if question_key not in answers:
+            continue
+        results.append({
+            'id': str(uuid4())[:8],
+            'from_name': answer_from_name,
+            'to_name': question_to_name,
+            'type': 'textarea',
+            'score': score,
+            'readonly': False,
+            'value': {'text': [answers[question_key]]},
+        })
+    if aspect and route.aspect_from_name and route.aspect_to_name:
+        results.append({
+            'id': str(uuid4())[:8],
+            'from_name': route.aspect_from_name,
+            'to_name': route.aspect_to_name,
+            'type': 'labels',
+            'score': score,
+            'readonly': False,
+            'value': {'labels': [aspect]},
+        })
+    return results

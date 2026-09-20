@@ -1,7 +1,13 @@
 import numpy as np
 
-from label_studio_ml.aggregate_backend.result_converter import convert_masks
-from label_studio_ml.aggregate_backend.template_router import resolve_image_route
+from label_studio_ml.aggregate_backend.result_converter import (
+    convert_masks,
+    convert_vqa,
+)
+from label_studio_ml.aggregate_backend.template_router import (
+    resolve_image_route,
+    resolve_vqa_route,
+)
 
 
 class _Tag:
@@ -58,3 +64,72 @@ def test_brush_result_is_rle():
     assert results[0]['type'] == 'brushlabels'
     assert results[0]['value']['brushlabels'] == ['文本']
     assert score == 0.9
+
+
+def test_routes_object_detection():
+    route = resolve_image_route(
+        _Model({'RectangleLabels': ('objects', 'image', 'image')})
+    )
+    assert route.control_type == 'RectangleLabels'
+
+
+def test_routes_polygon_segmentation():
+    route = resolve_image_route(
+        _Model({'PolygonLabels': ('polygons', 'image', 'image')})
+    )
+    assert route.control_type == 'PolygonLabels'
+
+
+def test_mask_results_convert_to_rectangle_and_polygon():
+    mask = np.zeros((20, 20), dtype=np.uint8)
+    mask[5:15, 4:12] = 1
+    rectangle_route = resolve_image_route(
+        _Model({'RectangleLabels': ('objects', 'image', 'image')})
+    )
+    rectangle_results, rectangle_score = convert_masks(
+        rectangle_route, [mask], [0.8], ['文本'], 20, 20
+    )
+    assert rectangle_results[0]['type'] == 'rectanglelabels'
+    assert rectangle_results[0]['value']['rectanglelabels'] == ['文本']
+    assert rectangle_score == 0.8
+
+    polygon_route = resolve_image_route(
+        _Model({'PolygonLabels': ('polygons', 'image', 'image')})
+    )
+    polygon_results, polygon_score = convert_masks(
+        polygon_route, [mask], [0.7], ['文本'], 20, 20
+    )
+    assert polygon_results[0]['type'] == 'polygonlabels'
+    assert polygon_results[0]['value']['polygonlabels'] == ['文本']
+    assert polygon_score == 0.7
+
+
+def test_routes_and_converts_vqa():
+    model = _Model({})
+    model.label_config = '''
+    <View>
+      <Image name="image" value="$image"/>
+      <Labels name="aspect" toName="q1"><Label value="counting"/></Labels>
+      <Text name="q1" value="$question1"/>
+      <TextArea name="answer1" toName="q1"/>
+      <Text name="q2" value="$question2"/>
+      <TextArea name="answer2" toName="q2"/>
+    </View>
+    '''
+    route = resolve_vqa_route(model)
+    assert route.image_data_key == 'image'
+    assert route.questions == [
+        ('question1', 'answer1', 'q1'),
+        ('question2', 'answer2', 'q2'),
+    ]
+    results = convert_vqa(
+        route,
+        {'question1': '两个', 'question2': '蓝色'},
+        'counting',
+        1.0,
+    )
+    assert [result['type'] for result in results] == [
+        'textarea', 'textarea', 'labels'
+    ]
+    assert results[0]['value']['text'] == ['两个']
+    assert results[-1]['value']['labels'] == ['counting']

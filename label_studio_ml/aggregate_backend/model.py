@@ -8,8 +8,8 @@ from urllib.parse import unquote
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
 from PIL import Image
-from .result_converter import convert_masks, convert_ocr_lines
-from .template_router import resolve_image_route
+from .result_converter import convert_masks, convert_ocr_lines, convert_vqa
+from .template_router import resolve_image_route, resolve_vqa_route
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ if USE_THIRD_PARTY_MODELS:
     from .providers.errors import ProviderAPIError
     from .templates.mask_segmentation import DoubaoMaskClassifier
     from .templates.ocr import DoubaoOCR
+    from .templates.vqa import DoubaoVQA
 else:
     import torch
     from sam2.build_sam import build_sam2
@@ -110,6 +111,31 @@ class NewModel(LabelStudioMLBase):
             or kwargs.pop('label_studio_url', None)
         )
         seed_api_key = credentials.get('seed_api_key') or os.getenv('ARK_API_KEY')
+
+        vqa_route = resolve_vqa_route(self)
+        if vqa_route:
+            if not USE_THIRD_PARTY_MODELS:
+                raise ValueError(
+                    'VQA template detected in dedicated-model mode; connect the '
+                    'original dedicated VQA backend or enable USE_THIRD_PARTY_MODELS'
+                )
+            task = tasks[0]
+            image_path = self._get_image_path(
+                task['data'][vqa_route.image_data_key], task.get('id')
+            )
+            questions = {
+                question_key: task['data'].get(question_key, '')
+                for question_key, _, _ in vqa_route.questions
+            }
+            answers, aspect, score = DoubaoVQA(api_key=seed_api_key).answer_file(
+                image_path, questions, vqa_route.labels
+            )
+            results = convert_vqa(vqa_route, answers, aspect, score)
+            return ModelResponse(predictions=[{
+                'result': results,
+                'model_version': self.get('model_version'),
+                'score': score,
+            }])
 
         route = resolve_image_route(self)
         value = route.data_key
