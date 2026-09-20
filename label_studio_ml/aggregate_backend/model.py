@@ -9,6 +9,7 @@ from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
 from PIL import Image
 from .result_converter import convert_masks, convert_ocr_lines, convert_vqa
+from .resource_url import normalize_ls_resource_url
 from .template_router import resolve_image_route, resolve_vqa_route
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,19 @@ class NewModel(LabelStudioMLBase):
     """
 
     def _get_image_path(self, image_url, task_id):
+        original_image_url = image_url
+        ls_url = getattr(self, '_request_ls_url', None)
+        image_url = normalize_ls_resource_url(
+            original_image_url, ls_url
+        )
+        logger.info(
+            'LS resource URL handoff to SDK: task_id=%s ls_url=%r '
+            'original=%r normalized=%r',
+            task_id,
+            ls_url,
+            original_image_url,
+            image_url,
+        )
         media_root = os.getenv('LABEL_STUDIO_CONTAINER_MEDIA_ROOT')
         if media_root and image_url.startswith('/data/'):
             root = pathlib.Path(media_root).resolve()
@@ -68,7 +82,7 @@ class NewModel(LabelStudioMLBase):
         )
 
     def set_image(self, image_url, task_id):
-        image_path = self.get_local_path(image_url, task_id=task_id)
+        image_path = self._get_image_path(image_url, task_id)
         image = Image.open(image_path)
         image = np.array(image.convert("RGB"))
         predictor.set_image(image)
