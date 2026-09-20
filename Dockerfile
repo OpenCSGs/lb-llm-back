@@ -38,6 +38,4 @@ RUN pip install --no-cache-dir -r /tmp/ml-backend-requirements.txt \
 COPY . /opt/label-studio-ml-backend
 RUN pip install --no-cache-dir --no-deps -e /opt/label-studio-ml-backend
 
-CMD gunicorn --chdir /opt/label-studio-ml-backend \
-    --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 \
-    label_studio_ml.aggregate_backend._wsgi:app
+CMD ["sh", "-c", "exec gunicorn --chdir /opt/label-studio-ml-backend --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 label_studio_ml.aggregate_backend._wsgi:app"]
