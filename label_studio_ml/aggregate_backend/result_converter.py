@@ -172,3 +172,32 @@ def convert_vqa(route, answers, aspect, score):
             'value': {'labels': [aspect]},
         })
     return results
+
+
+def convert_document_regions(route, regions):
+    """Convert multi-page regions, preserving LS's zero-based item index."""
+    results = []
+    scores = []
+    for region in regions:
+        probability = float(region.get('confidence', 1.0))
+        common = _common_result(
+            route,
+            int(region['original_width']),
+            int(region['original_height']),
+            probability,
+        )
+        results.append({
+            **common,
+            'type': 'rectanglelabels',
+            'item_index': int(region['page_index']),
+            'value': {
+                'x': float(region['x']),
+                'y': float(region['y']),
+                'width': float(region['width']),
+                'height': float(region['height']),
+                'rotation': 0,
+                'rectanglelabels': [region['label']],
+            },
+        })
+        scores.append(probability)
+    return results, sum(scores) / max(len(scores), 1)

@@ -8,7 +8,3 @@
 **/__pycache__
 **/*.pyc
 label_studio_ml/examples/segment_anything_2_image/data
-# Implementations scheduled for later releases are kept locally but excluded
-# from the current five-template image.
-label_studio_ml/aggregate_backend/templates/multi_page_document.py
-label_studio_ml/aggregate_backend/tests/test_multi_page_document.py

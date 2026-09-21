@@ -11,10 +11,15 @@ class TemplateRoute:
     labels: list[str]
     transcription_from_name: str | None = None
     labels_from_name: str | None = None
+    value_list: bool = False
 
     @property
     def is_ocr(self):
         return self.transcription_from_name is not None
+
+    @property
+    def is_multi_page(self):
+        return self.control_type == 'RectangleLabels' and self.value_list
 
 
 @dataclass(frozen=True)
@@ -133,6 +138,25 @@ def _resolve_ocr_route(model):
     )
 
 
+def _resolve_image_data_source(model, to_name, fallback_data_key):
+    """Return the XML data key and whether the target Image uses valueList."""
+    try:
+        root = ElementTree.fromstring(model.label_config)
+    except (AttributeError, ElementTree.ParseError, TypeError):
+        return fallback_data_key, False
+
+    for image in root.findall('.//Image'):
+        if image.get('name') != to_name:
+            continue
+        value_list = image.get('valueList', '')
+        if value_list.startswith('$'):
+            return value_list[1:], True
+        value = image.get('value', '')
+        if value.startswith('$'):
+            return value[1:], False
+    return fallback_data_key, False
+
+
 def resolve_image_route(model) -> TemplateRoute:
     """Resolve an image annotation pipeline from project config."""
     ocr_route = _resolve_ocr_route(model)
@@ -149,15 +173,20 @@ def resolve_image_route(model) -> TemplateRoute:
         labels = list(model.label_interface.get_tag(from_name).labels)
         if not labels:
             raise ValueError(f'{control_type} must contain at least one Label')
+        data_key, value_list = _resolve_image_data_source(
+            model, to_name, data_key
+        )
         return TemplateRoute(
             control_type=control_type,
             from_name=from_name,
             to_name=to_name,
             data_key=data_key,
             labels=labels,
+            value_list=value_list,
         )
 
     raise ValueError(
         'Unsupported labeling config: expected BrushLabels, PolygonLabels, '
-        'RectangleLabels, OCR, or visual-question-answering controls'
+        'RectangleLabels, multi-page document, OCR, or '
+        'visual-question-answering controls'
     )

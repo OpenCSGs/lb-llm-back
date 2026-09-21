@@ -8,7 +8,12 @@ from urllib.parse import unquote
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
 from PIL import Image
-from .result_converter import convert_masks, convert_ocr_lines, convert_vqa
+from .result_converter import (
+    convert_document_regions,
+    convert_masks,
+    convert_ocr_lines,
+    convert_vqa,
+)
 from .resource_url import normalize_ls_resource_url
 from .template_router import resolve_image_route, resolve_vqa_route
 
@@ -28,6 +33,7 @@ if USE_THIRD_PARTY_MODELS:
     from .providers.entity_segment import VolcengineEntitySegment
     from .providers.errors import ProviderAPIError
     from .templates.mask_segmentation import DoubaoMaskClassifier
+    from .templates.multi_page_document import DoubaoDocument
     from .templates.ocr import DoubaoOCR
     from .templates.vqa import DoubaoVQA
 else:
@@ -153,6 +159,46 @@ class NewModel(LabelStudioMLBase):
 
         route = resolve_image_route(self)
         value = route.data_key
+
+        if route.is_multi_page:
+            if not USE_THIRD_PARTY_MODELS:
+                raise ValueError(
+                    'Multi-page document template detected in dedicated-model '
+                    'mode; connect the original dedicated document backend or '
+                    'enable USE_THIRD_PARTY_MODELS'
+                )
+            task = tasks[0]
+            page_urls = task.get('data', {}).get(value)
+            if not isinstance(page_urls, list) or not page_urls:
+                raise ValueError(
+                    f'Multi-page document data "{value}" must be a non-empty list'
+                )
+            if not all(isinstance(url, str) and url for url in page_urls):
+                raise ValueError(
+                    f'Multi-page document data "{value}" contains an invalid URL'
+                )
+            logger.info(
+                'Multi-page document prediction: task_id=%s data_key=%s pages=%d '
+                'labels=%s',
+                task.get('id'), value, len(page_urls), route.labels,
+            )
+            page_paths = [
+                self._get_image_path(url, task.get('id')) for url in page_urls
+            ]
+            regions = DoubaoDocument(api_key=seed_api_key).extract(
+                page_paths, route.labels
+            )
+            results, score = convert_document_regions(route, regions)
+            logger.info(
+                'Multi-page document result returned to Label Studio: '
+                'pages=%d regions=%d results=%d',
+                len(page_urls), len(regions), len(results),
+            )
+            return ModelResponse(predictions=[{
+                'result': results,
+                'model_version': self.get('model_version'),
+                'score': score,
+            }])
 
         if route.is_ocr:
             if not USE_THIRD_PARTY_MODELS:
