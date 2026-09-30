@@ -144,7 +144,11 @@ class NewModel(LabelStudioMLBase):
                 task['data'][vqa_route.image_data_key], task.get('id')
             )
             questions = {
-                question_key: task['data'].get(question_key, '')
+                question_key: (
+                    vqa_route.fixed_questions[question_key]
+                    if question_key in vqa_route.fixed_questions
+                    else task['data'].get(question_key, '')
+                )
                 for question_key, _, _ in vqa_route.questions
             }
             answers, aspect, score = DoubaoVQA(api_key=seed_api_key).answer_file(

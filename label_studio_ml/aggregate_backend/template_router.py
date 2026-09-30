@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from xml.etree import ElementTree
 
 
@@ -29,6 +29,7 @@ class VQARoute:
     aspect_from_name: str | None = None
     aspect_to_name: str | None = None
     labels: list[str] | None = None
+    fixed_questions: dict[str, str] = field(default_factory=dict)
 
 
 def resolve_vqa_route(model):
@@ -43,15 +44,20 @@ def resolve_vqa_route(model):
         return None
 
     texts = {
-        tag.get('name'): tag.get('value', '')[1:]
+        tag.get('name'): tag.get('value', '')
         for tag in root.findall('.//Text')
-        if tag.get('name') and tag.get('value', '').startswith('$')
+        if tag.get('name') and tag.get('value', '').strip()
     }
     questions = []
+    fixed_questions = {}
     for answer in root.findall('.//TextArea'):
         to_name = answer.get('toName')
         if answer.get('name') and to_name in texts:
-            questions.append((texts[to_name], answer.get('name'), to_name))
+            value = texts[to_name]
+            key = value[1:] if value.startswith('$') else to_name
+            questions.append((key, answer.get('name'), to_name))
+            if not value.startswith('$'):
+                fixed_questions[key] = value
     if not questions:
         return None
 
@@ -65,6 +71,7 @@ def resolve_vqa_route(model):
     return VQARoute(
         image_data_key=image.get('value')[1:],
         questions=questions,
+        fixed_questions=fixed_questions,
         aspect_from_name=aspect_from_name,
         aspect_to_name=aspect_to_name,
         labels=labels,

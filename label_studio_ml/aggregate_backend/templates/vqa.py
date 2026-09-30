@@ -46,7 +46,7 @@ class DoubaoVQA:
             if question is not None and str(question).strip()
         ]
         if not question_payload:
-            return {}, None, 1.0
+            raise ValueError('VQA questions are empty; provide question data or fixed Text values in the labeling config')
 
         mime_type = mimetypes.guess_type(image_path)[0] or 'application/octet-stream'
         with open(image_path, 'rb') as image_file:
