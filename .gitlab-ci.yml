@@ -18,3 +18,7 @@ include:
       platforms: "linux/amd64,linux/arm64"
       proxy: http://172.21.1.212:7897
       no_proxy: "localhost,127.0.0.1,docker,${CI_REGISTRY},${CI_SERVER_HOST},registry.opencsg.com"
+      build_args:
+        - "APT_MIRROR=https://mirrors.aliyun.com"
+        - "PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/"
+        - "PIP_TRUSTED_HOST=mirrors.aliyun.com"
