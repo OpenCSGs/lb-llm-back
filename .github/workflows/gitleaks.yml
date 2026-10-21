@@ -5,6 +5,7 @@ on:
 
 env:
   ACTIONS_STEP_DEBUG: '${{ secrets.ACTIONS_STEP_DEBUG }}'
+  GITLEAKS_VERSION: "8.30.1"
 
 jobs:
   gitleaks:
@@ -13,31 +14,13 @@ jobs:
     steps:
       - uses: hmarr/debug-action@v3.0.0
 
-      - name: Install
-        shell: bash
-        run: |
-          set -euo pipefail
-          arch="$(uname)_$(uname -m)"
-          platform=$(echo $arch | tr '[:upper:]' '[:lower:]' )
-          echo "PLATFORM=$platform" >> $GITHUB_ENV
-          echo "GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')" >> $GITHUB_ENV
-
-      - name: Cache gitleaks archive
-        id: cache_gitleaks
-        uses: actions/cache@v5
-        with:
-          path: /usr/local/bin/gitleaks
-          key: gitleaks-${{ env.PLATFORM }}-${{ env.GITLEAKS_VERSION }}
-
       - name: Download and configure gitleaks
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ steps.cache_gitleaks.outputs.cache-hit }}" != "true" ]]; then
-            DOWNLOAD_URL="https://github.com/gitleaks/gitleaks/releases/download/v${{ env.GITLEAKS_VERSION }}/gitleaks_${{ env.GITLEAKS_VERSION }}_linux_x64.tar.gz"
-            echo "Download Gitleaks ${{ env.GITLEAKS_VERSION }} for ${{ env.PLATFORM }} from ${DOWNLOAD_URL}"
-            curl -fsSL "$DOWNLOAD_URL" | tar xzf - -C /usr/local/bin
-          fi
+          DOWNLOAD_URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "Download Gitleaks ${GITLEAKS_VERSION} from ${DOWNLOAD_URL}"
+          curl -fsSL "$DOWNLOAD_URL" | tar xzf - -C /usr/local/bin
           chmod +x /usr/local/bin/gitleaks
 
       - name: Checkout
