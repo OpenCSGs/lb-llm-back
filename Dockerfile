@@ -2,9 +2,9 @@
 ARG PYTHON_IMAGE=m.daocloud.io/docker.io/library/python:3.12-slim
 FROM ${PYTHON_IMAGE}
 
-ARG APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
-ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
-ARG PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+ARG APT_MIRROR=https://mirrors.aliyun.com
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG PIP_TRUSTED_HOST=mirrors.aliyun.com
 ARG PIP_DEFAULT_TIMEOUT=180
 ARG PIP_RETRIES=10
 
